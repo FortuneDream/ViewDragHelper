@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.example.q.viewdraghelpertest.DragLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="#66000000"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.q.viewdraghelpertest.MainActivity">
+    <!--左面版-->
+    <LinearLayout
+        android:background="@color/colorPrimary"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+    <!--主面板，这样就可以保证主面板在上，左面版在下-->
+    <LinearLayout
+        android:background="@color/colorAccent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</com.example.q.viewdraghelpertest.DragLayout>
