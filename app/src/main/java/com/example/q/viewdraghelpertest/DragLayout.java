@@ -33,6 +33,21 @@ public class DragLayout extends FrameLayout {
     private int mHeight;
     private int mWidth;
     private int mRange;
+    private onDragStatusChangeListener mListener;
+    private Status mStatus=Status.Close;
+
+    public static enum Status{
+        Close,Open,Dragging;
+    }
+
+    public interface  onDragStatusChangeListener{
+        void onClose();
+        void onOpen();
+        void onDragging(float percent);
+    }
+    public void setDragStatusListener(onDragStatusChangeListener listener){
+            this.mListener=listener;
+    }
 
     //将三个构造函数串起来
     public DragLayout(Context context) {
@@ -64,7 +79,7 @@ public class DragLayout extends FrameLayout {
             return true;//如果返回true，那么哪个面板都可以拖拽，child==mMainContent表示，只想要主面板被拖拽
         }
 
-        //被捕获时调用一次，当tryViewCaptured返回true才会调用(即主面板被拖拽时调用,左面版拖拽不被调用)
+        //被捕获时调用一次，当tryViewCaptured返回true才会调用
         //如果点击时没有捕获，移动到可捕获的区域时也会调用一次，并且之后只要不松手，就不会再去回调tryCaptureView
         @Override
         public void onViewCaptured(View capturedChild, int activePointerId) {
@@ -72,7 +87,7 @@ public class DragLayout extends FrameLayout {
             super.onViewCaptured(capturedChild, activePointerId);
         }
 
-        //获取水平拖拽范围(此时效果为：不想往左边拖拽，并且拖拽到右边有一定的限制)
+        //获取水平拖拽范围
         //返回拖住的范围，但是不对拖拽进行真正的限制，仅仅决定动画执行的速度
         @Override
         public int getViewHorizontalDragRange(View child) {
@@ -80,7 +95,9 @@ public class DragLayout extends FrameLayout {
         }
 
         //2.根据建议值修正正要移动的位置(重要)
-        //此时没有发生真正的移动，因为手机的移动和视图的移动之间有延迟，
+        //实现
+        //主面板在全屏时不想往左边拖拽，并且拖拽到右边有一定的限制
+        //此时没有发生真正的移动，因为手指的移动和视图的移动之间有延迟，
 
         /**
          *通过View的dragTo方法中的offsetLeftAndRight方法实现,但2.3版本没有在此方法实现invalidate方法，考虑到兼容，在onViewPositionChanged加入invalidate重绘
@@ -96,7 +113,16 @@ public class DragLayout extends FrameLayout {
             if (child == mMainContent) {
                 left = fixLeft(left);//修正左边值（限定范围）
             }
+            return left;
+        }
 
+        //根据范围修正左边值
+        private int fixLeft(int left) {
+            if (left < 0) {
+                return 0;
+            } else if (left > mRange) {
+                return mRange;
+            }
             return left;
         }
 
@@ -113,7 +139,9 @@ public class DragLayout extends FrameLayout {
         @Override
         public void onViewPositionChanged(View changedView, int left, int top, int dx, int dy) {
             super.onViewPositionChanged(changedView, left, top, dx, dy);
-            //实现:mLeftContent保持不动，拖动mLeftContent的时候，mMainContent移动
+            //实现:
+            // 拖动mLeftContent
+            // mLeftContent保持不动，mMainContent移动
             int newLeft = left;
             if (changedView == mLeftContent) {
                 //把当前变化量传给mMainContent
@@ -163,11 +191,49 @@ public class DragLayout extends FrameLayout {
         }
     };
 
+
+    //注意:
+//    1.setTranslationX改变了view的位置，但没有改变view的LayoutParams里的margin属性；也即不改变getLeft等view的信息
+//    2.它改变的是android:translationX 属性，也即这个参数级别是和margin平行的。
+
     private void dispatchDragEvent(int newLeft) {
         float percent = newLeft * 1.0f / mRange;
         Log.e(TAG, "percent:" + percent);
+        Status preStatus=mStatus;//上一次状态
+        mStatus=updateStatus(percent);
+        if (mStatus!=preStatus){
+            if (mStatus==Status.Close){
+                if (mListener!=null){
+                    mListener.onClose();
+                }
 
-//        > 1. 左面板：(缩放动画，平移动画，透明度动画)
+            } else if (mStatus==Status.Open) {
+                if (mListener!=null){
+                    mListener.onOpen();
+                }
+            }else {
+                if (mListener!=null){
+                    mListener.onDragging(percent);
+                }
+            }
+        }
+        animViews(percent);
+
+
+    }
+
+    private Status updateStatus(float percent) {
+        if (percent==0){
+            return Status.Close;
+        }else if (percent==1.0f){
+            return Status.Open;
+        }else {
+            return Status.Dragging;
+        }
+    }
+
+    private void animViews(float percent) {
+        //        > 1. 左面板：(缩放动画，平移动画，透明度动画)
         //缩放动画：0.5-1.0的大小变化动画
         mLeftContent.setScaleX(floatEvaluator.evaluate(percent,0.5f,1.0f));
         mLeftContent.setScaleY(floatEvaluator.evaluate(percent,0.5f,1.0f));
@@ -180,11 +246,14 @@ public class DragLayout extends FrameLayout {
 //        > 2. 主面板:(缩放动画)
         mMainContent.setScaleX(floatEvaluator.evaluate(percent,1.0f,0.8f));
         mMainContent.setScaleY(floatEvaluator.evaluate(percent,1.0f,0.8f));
+        Log.e("TAG","mMainContent:ScaleY"+mMainContent.getScaleY());
+        Log.e("TAG","mMainContent:Y"+mMainContent.getY());
+        Log.e("TAG","mMainContent:Left"+mMainContent.getLeft());
+        Log.e("TAG","mMainContent:Height"+mMainContent.getHeight());
+        Log.e("TAG","mMainContent:Width"+mMainContent.getWidth());
 //                > 3. 背景动画:亮度变化(颜色变化)
-        getBackground().setColorFilter((Integer) argbEvaluator.evaluate(percent,Color.BLACK,Color.TRANSPARENT), PorterDuff.Mode.SRC_OVER);
-
+        getBackground().setColorFilter((Integer) argbEvaluator.evaluate(percent, Color.BLACK,Color.TRANSPARENT), PorterDuff.Mode.SRC_OVER);
     }
-
 
 
     @Override
@@ -238,15 +307,7 @@ public class DragLayout extends FrameLayout {
     }
 
 
-    //根据范围修正左边值
-    private int fixLeft(int left) {
-        if (left < 0) {
-            return 0;
-        } else if (left > mRange) {
-            return mRange;
-        }
-        return left;
-    }
+
 
     //2.传递触摸事件
     @Override
@@ -261,7 +322,7 @@ public class DragLayout extends FrameLayout {
         return true;//持续接受事件
     }
 
-    //在这里可以拿到XML中View的引用
+    //拿到XML中View的引用
     @Override
     protected void onFinishInflate() {
         super.onFinishInflate();
@@ -277,6 +338,7 @@ public class DragLayout extends FrameLayout {
     }
 
     //尺寸有变化的时候调用
+    //获得DragLayout的长宽测量值和滑动最大值
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
