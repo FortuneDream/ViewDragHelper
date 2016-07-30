@@ -40,6 +40,14 @@ public class DragLayout extends FrameLayout {
         Close,Open,Dragging;
     }
 
+    public Status getmStatus() {
+        return mStatus;
+    }
+
+    public void setmStatus(Status mStatus) {
+        this.mStatus = mStatus;
+    }
+
     public interface  onDragStatusChangeListener{
         void onClose();
         void onOpen();
@@ -73,7 +81,7 @@ public class DragLayout extends FrameLayout {
         //尝试捕获,只要没有执行onCaptureView,就会一直回调这个方法，
         @Override
         public boolean tryCaptureView(View child, int pointerId) {
-            Log.e(TAG, "tryCaptureView");
+           // Log.e(TAG, "tryCaptureView");
             //child 当前被拖拽的View
             //pointerId 区分多点触摸的id
             return true;//如果返回true，那么哪个面板都可以拖拽，child==mMainContent表示，只想要主面板被拖拽
@@ -83,7 +91,7 @@ public class DragLayout extends FrameLayout {
         //如果点击时没有捕获，移动到可捕获的区域时也会调用一次，并且之后只要不松手，就不会再去回调tryCaptureView
         @Override
         public void onViewCaptured(View capturedChild, int activePointerId) {
-            Log.e(TAG, "onViewCaptured");
+           // Log.e(TAG, "onViewCaptured");
             super.onViewCaptured(capturedChild, activePointerId);
         }
 
@@ -108,7 +116,6 @@ public class DragLayout extends FrameLayout {
          */
         @Override
         public int clampViewPositionHorizontal(View child, int left, int dx) {
-            Log.e(TAG, "left:" + left + " dx:" + dx + " oldLeft:" + child.getLeft());
             //限定距离
             if (child == mMainContent) {
                 left = fixLeft(left);//修正左边值（限定范围）
@@ -200,22 +207,22 @@ public class DragLayout extends FrameLayout {
         float percent = newLeft * 1.0f / mRange;
         Log.e(TAG, "percent:" + percent);
         Status preStatus=mStatus;//上一次状态
-        mStatus=updateStatus(percent);
-        if (mStatus!=preStatus){
-            if (mStatus==Status.Close){
-                if (mListener!=null){
+        mStatus=updateStatus(percent);//实时修改状态
+        if (mStatus!=preStatus) {
+            if (mStatus == Status.Close) {
+                if (mListener != null) {//要判空
                     mListener.onClose();
                 }
 
-            } else if (mStatus==Status.Open) {
-                if (mListener!=null){
+            } else if (mStatus == Status.Open) {
+                if (mListener != null) {
                     mListener.onOpen();
                 }
-            }else {
+            }
+        }else {
                 if (mListener!=null){
                     mListener.onDragging(percent);
                 }
-            }
         }
         animViews(percent);
 
@@ -246,11 +253,11 @@ public class DragLayout extends FrameLayout {
 //        > 2. 主面板:(缩放动画)
         mMainContent.setScaleX(floatEvaluator.evaluate(percent,1.0f,0.8f));
         mMainContent.setScaleY(floatEvaluator.evaluate(percent,1.0f,0.8f));
-        Log.e("TAG","mMainContent:ScaleY"+mMainContent.getScaleY());
-        Log.e("TAG","mMainContent:Y"+mMainContent.getY());
-        Log.e("TAG","mMainContent:Left"+mMainContent.getLeft());
-        Log.e("TAG","mMainContent:Height"+mMainContent.getHeight());
-        Log.e("TAG","mMainContent:Width"+mMainContent.getWidth());
+//        Log.e("TAG","mMainContent:ScaleY"+mMainContent.getScaleY());
+//        Log.e("TAG","mMainContent:Y"+mMainContent.getY());
+//        Log.e("TAG","mMainContent:Left"+mMainContent.getLeft());
+//        Log.e("TAG","mMainContent:Height"+mMainContent.getHeight());
+//        Log.e("TAG","mMainContent:Width"+mMainContent.getWidth());
 //                > 3. 背景动画:亮度变化(颜色变化)
         getBackground().setColorFilter((Integer) argbEvaluator.evaluate(percent, Color.BLACK,Color.TRANSPARENT), PorterDuff.Mode.SRC_OVER);
     }
@@ -309,7 +316,7 @@ public class DragLayout extends FrameLayout {
 
 
 
-    //2.传递触摸事件
+    //2.传递触摸事件,拖拽时才会拦截事件并交给DragLayout处理
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         return dragHelper.shouldInterceptTouchEvent(ev);//传递事件给dragHelper，让他决定是否拦截

@@ -2,19 +2,63 @@
 <com.example.q.viewdraghelpertest.DragLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/dl"
-    android:background="#66000000"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#66000000"
     tools:context="com.example.q.viewdraghelpertest.MainActivity">
     <!--左面版-->
     <LinearLayout
-        android:background="@color/colorPrimary"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingBottom="50dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="50dp"
+        android:paddingTop="50dp">
+
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/head" />
+
+        <ListView
+            android:id="@+id/lv_left"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+
     </LinearLayout>
     <!--主面板，这样就可以保证主面板在上，左面版在下-->
-    <LinearLayout
-        android:background="@color/colorAccent"
+    <com.example.q.viewdraghelpertest.MyLinearLayout
+        android:id="@+id/my_main_ll"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:background="#ffffff"
+        android:orientation="vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="#18B6EF"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/iv_main"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginLeft="15dp"
+                android:src="@drawable/head" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:text="Header" />
+        </RelativeLayout>
+
+        <ListView
+            android:id="@+id/lv_main"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </com.example.q.viewdraghelpertest.MyLinearLayout>
 </com.example.q.viewdraghelpertest.DragLayout>
