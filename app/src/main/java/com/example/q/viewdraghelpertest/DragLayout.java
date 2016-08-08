@@ -28,8 +28,8 @@ public class DragLayout extends FrameLayout {
     private ViewDragHelper dragHelper;
     private ViewGroup mLeftContent;
     private ViewGroup mMainContent;
-    private FloatEvaluator floatEvaluator;//通过百分比，循序变换
-    private ArgbEvaluator argbEvaluator;//颜色差值器
+    private FloatEvaluator floatEvaluator=new FloatEvaluator();//通过百分比，循序变换
+    private ArgbEvaluator argbEvaluator=new ArgbEvaluator();//颜色差值器
     private int mHeight;
     private int mWidth;
     private int mRange;
@@ -37,14 +37,14 @@ public class DragLayout extends FrameLayout {
     private Status mStatus=Status.Close;
 
     public static enum Status{
-        Close,Open,Dragging;
+        Close,Open,Dragging
     }
 
-    public Status getmStatus() {
+    public Status getStatus() {
         return mStatus;
     }
 
-    public void setmStatus(Status mStatus) {
+    public void setStatus(Status mStatus) {
         this.mStatus = mStatus;
     }
 
@@ -59,20 +59,16 @@ public class DragLayout extends FrameLayout {
 
     //将三个构造函数串起来
     public DragLayout(Context context) {
-        this(context, null);//调用两个构造函数构造函数
+        this(context, null);
     }
 
     public DragLayout(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);//接着调用第三个构造函数
+        this(context, attrs, 0);
     }
 
     public DragLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        //1.初始化操作
         dragHelper = ViewDragHelper.create(this, mCallBack);
-        floatEvaluator=new FloatEvaluator();
-        argbEvaluator=new ArgbEvaluator();
-
     }
 
     //3.处理事件
@@ -81,31 +77,27 @@ public class DragLayout extends FrameLayout {
         //尝试捕获,只要没有执行onCaptureView,就会一直回调这个方法，
         @Override
         public boolean tryCaptureView(View child, int pointerId) {
-           // Log.e(TAG, "tryCaptureView");
             //child 当前被拖拽的View
             //pointerId 区分多点触摸的id
             return true;//如果返回true，那么哪个面板都可以拖拽，child==mMainContent表示，只想要主面板被拖拽
         }
 
-        //被捕获时调用一次，当tryViewCaptured返回true才会调用
-        //如果点击时没有捕获，移动到可捕获的区域时也会调用一次，并且之后只要不松手，就不会再去回调tryCaptureView
+        //当tryViewCaptured返回true时，调用且仅一次
         @Override
         public void onViewCaptured(View capturedChild, int activePointerId) {
-           // Log.e(TAG, "onViewCaptured");
             super.onViewCaptured(capturedChild, activePointerId);
         }
 
-        //获取水平拖拽范围
-        //返回拖住的范围，但是不对拖拽进行真正的限制，仅仅决定动画执行的速度
+        //返回拖住的范围，但不对拖拽进行真正的限制，仅仅决定动画执行的速度
         @Override
         public int getViewHorizontalDragRange(View child) {
             return mRange;
         }
 
         //2.根据建议值修正正要移动的位置(重要)
-        //实现
-        //主面板在全屏时不想往左边拖拽，并且拖拽到右边有一定的限制
-        //此时没有发生真正的移动，因为手指的移动和视图的移动之间有延迟，
+        //实现:
+        //拖动主面板，露出底部的左面版
+        //手指的移动和视图的移动之间有延迟，根据手指移动的建议值来修正位置
 
         /**
          *通过View的dragTo方法中的offsetLeftAndRight方法实现,但2.3版本没有在此方法实现invalidate方法，考虑到兼容，在onViewPositionChanged加入invalidate重绘
@@ -123,7 +115,7 @@ public class DragLayout extends FrameLayout {
             return left;
         }
 
-        //根据范围修正左边值
+        //拖动主面板不能超过屏幕最左边，也不能超过mRange
         private int fixLeft(int left) {
             if (left < 0) {
                 return 0;
@@ -146,8 +138,7 @@ public class DragLayout extends FrameLayout {
         @Override
         public void onViewPositionChanged(View changedView, int left, int top, int dx, int dy) {
             super.onViewPositionChanged(changedView, left, top, dx, dy);
-            //实现:
-            // 拖动mLeftContent
+            //实现:拖动mLeftContent
             // mLeftContent保持不动，mMainContent移动
             int newLeft = left;
             if (changedView == mLeftContent) {
@@ -183,18 +174,11 @@ public class DragLayout extends FrameLayout {
                 //拖动停止且主面板的位置在一半屏幕以上
                 open();
             } else if (xvel > 0) {
-                //或者速度》0
                 open();//默认平滑
             } else {
                 //其他都关闭
                 close();
             }
-        }
-
-
-        @Override
-        public void onViewDragStateChanged(int state) {
-            super.onViewDragStateChanged(state);
         }
     };
 
@@ -203,9 +187,9 @@ public class DragLayout extends FrameLayout {
 //    1.setTranslationX改变了view的位置，但没有改变view的LayoutParams里的margin属性；也即不改变getLeft等view的信息
 //    2.它改变的是android:translationX 属性，也即这个参数级别是和margin平行的。
 
+    //更新状态和执行动画
     private void dispatchDragEvent(int newLeft) {
         float percent = newLeft * 1.0f / mRange;
-        Log.e(TAG, "percent:" + percent);
         Status preStatus=mStatus;//上一次状态
         mStatus=updateStatus(percent);//实时修改状态
         if (mStatus!=preStatus) {
@@ -213,7 +197,6 @@ public class DragLayout extends FrameLayout {
                 if (mListener != null) {//要判空
                     mListener.onClose();
                 }
-
             } else if (mStatus == Status.Open) {
                 if (mListener != null) {
                     mListener.onOpen();
@@ -225,8 +208,6 @@ public class DragLayout extends FrameLayout {
                 }
         }
         animViews(percent);
-
-
     }
 
     private Status updateStatus(float percent) {
@@ -244,8 +225,6 @@ public class DragLayout extends FrameLayout {
         //缩放动画：0.5-1.0的大小变化动画
         mLeftContent.setScaleX(floatEvaluator.evaluate(percent,0.5f,1.0f));
         mLeftContent.setScaleY(floatEvaluator.evaluate(percent,0.5f,1.0f));
-
-
         //平移动画：-mWidth/2.0f-0.0f
         mLeftContent.setTranslationX(floatEvaluator.evaluate(percent,-mWidth/2.0f,1.0f));
         //透明度：0.5->1.0f
@@ -253,26 +232,21 @@ public class DragLayout extends FrameLayout {
 //        > 2. 主面板:(缩放动画)
         mMainContent.setScaleX(floatEvaluator.evaluate(percent,1.0f,0.8f));
         mMainContent.setScaleY(floatEvaluator.evaluate(percent,1.0f,0.8f));
-//        Log.e("TAG","mMainContent:ScaleY"+mMainContent.getScaleY());
-//        Log.e("TAG","mMainContent:Y"+mMainContent.getY());
-//        Log.e("TAG","mMainContent:Left"+mMainContent.getLeft());
-//        Log.e("TAG","mMainContent:Height"+mMainContent.getHeight());
-//        Log.e("TAG","mMainContent:Width"+mMainContent.getWidth());
 //                > 3. 背景动画:亮度变化(颜色变化)
         getBackground().setColorFilter((Integer) argbEvaluator.evaluate(percent, Color.BLACK,Color.TRANSPARENT), PorterDuff.Mode.SRC_OVER);
     }
 
 
+    //平滑持续动画的模板
     @Override
     public void computeScroll() {
         super.computeScroll();
-        //2.持续动画（高频率动画）
         if (dragHelper.continueSettling(true)) {
-            //如果返回true，动画还需要继续执行
             ViewCompat.postInvalidateOnAnimation(this);//post排列起来，延时操作
         }
     }
 
+    //自动开启，自动关闭
     public void close() {
         close(true);
     }
@@ -281,12 +255,12 @@ public class DragLayout extends FrameLayout {
         open(true);
     }
 
-    //isSmooth是否平滑
+    //isSmooth是否平滑,open/close的是左面版,移动是主面板
     public void close(boolean isSmooth) {
         int finalLeft = 0;
         if (isSmooth) {
-            //触发一个平滑动画
-            if (dragHelper.smoothSlideViewTo(mMainContent, finalLeft, 0)) {//smoothSlideViewTo内部会调用Scroller的startScroll方法，然后会调用computeScroll，然后移动
+            //触发一个平滑移动
+            if (dragHelper.smoothSlideViewTo(mMainContent, finalLeft, 0)) {//smoothSlideViewTo内部会调用Scroller的startScroll方法，computeScroll，移动,参数三为finalTop
                 //返回true表示还没有移动到指定位置，需要刷新界面
                 //参数传this(child所在的ViewGroup)
                 ViewCompat.postInvalidateOnAnimation(this);//post将动画排列起来，延时操作
@@ -296,16 +270,11 @@ public class DragLayout extends FrameLayout {
         }
 
     }
-
-    //open的是左面版,移动是主面板
     public void open(boolean isSmooth) {
         int finalLeft = mRange;
         if (isSmooth) {
-            //触发一个平滑动画
-            if (dragHelper.smoothSlideViewTo(mMainContent, finalLeft, 0)) {//smoothSlideViewTo内部会调用Scroller的startScroll方法，然后会调用computeScroll，然后移动
-                //返回true表示还没有移动到指定位置，需要刷新界面
-                //参数传this(child所在的ViewGroup)
-                ViewCompat.postInvalidateOnAnimation(this);//post将动画排列起来，延时操作
+            if (dragHelper.smoothSlideViewTo(mMainContent, finalLeft, 0)) {
+                ViewCompat.postInvalidateOnAnimation(this);
             }
         } else {
             mMainContent.layout(finalLeft, 0, finalLeft + mWidth, 0 + mHeight);
